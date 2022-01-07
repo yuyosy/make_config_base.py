@@ -1,0 +1,38 @@
+name: default
+presets:
+  - 
+    name: 想定Configベースファイル
+    mode_flag: i
+    file_pattern: '*.txt'
+    output: output/Config/想定
+    template:
+      folder: templates 
+      file: content_base.j2
+    read_content: true
+    read_content_options:
+      start: 0
+      end: '#show running-config'
+      # - end: '#show startup-config'
+    additional_params:
+      mode: 想定
+  - 
+    name: 投入Configベースファイル
+    mode_flag: a
+    file_pattern: '*.txt'
+    output: output/Config/投入
+    template:
+      folder: templates 
+      file: config_base.j2
+    additional_params:
+      mode: 投入
+  - 
+    name: 戻しConfigベースファイル
+    mode_flag: b
+    file_pattern: '*.txt'
+    output: output/Config/戻し
+    template:
+      folder: templates 
+      file: config_base.j2
+    additional_params:
+      mode: 戻し
+
