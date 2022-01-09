@@ -2,7 +2,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Generator, Union
+from typing import Any, Dict, Generator, Union
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -10,10 +10,9 @@ from jinja2 import Environment, FileSystemLoader
 
 def resource_path(*args) -> Path:
     base_path = None
-    try:
-        sys._MEIPASS
-        base_path = Path(sys.args[0]).absolute().parent
-    except AttributeError:
+    if hasattr(sys, '_MEIPASS'):
+        base_path = Path(sys.argv[0]).absolute().parent
+    else:
         base_path = Path.cwd()
     return base_path.joinpath(*args)
 
@@ -26,18 +25,13 @@ def set_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def get_config(config_file: Path) -> dict:
+def get_config(config_file: Path) -> Dict[str, Any]:
     with config_file.open('r', encoding='utf-8') as f:
-        config: dict = yaml.safe_load(f)
-        # print(config)
-
-    if config.get('presets') is None:
-        sys.exit(1)
-
+        config = yaml.safe_load(f)
     return config
 
 
-def read_content(file: Path, option: dict) -> str:
+def read_content(file: Path, option: Dict[str, Any]) -> str:
     with file.open('r') as f:
         data = f.read()
     start = option.get('start', 0)
@@ -60,14 +54,16 @@ def setup_jinja(template_folder: str = '.', encoding: str = 'utf-8') -> Environm
     return env
 
 
-def make_base(files: Union[Generator, list], preset: dict) -> None:
+def make_base(files: Union[Generator, list], preset: Dict[str, Any]) -> None:
     template_data = preset.get('template')
+    if not template_data:
+        return
     env = setup_jinja(template_data.get('folder'))
     params = dict()
     for file in files:
         print(file)
         if preset.get('read_content'):
-            content = read_content(file, preset.get('read_content_options'))
+            content = read_content(file, preset.get('read_content_options', {'start', 0}))
             params.update({'content': content})
         template = env.get_template(template_data.get('file'))
         params.update({'additional_params': preset.get('additional_params')})
@@ -85,7 +81,10 @@ if __name__ == '__main__':
 
     config = get_config(resource_path('config.yaml') if args.config is None else resource_path(args.config))
 
-    presets = {item.get('mode_flag'): item for item in config.get('presets') if item.get('mode_flag')}
+    if not config or config.get('presets') is None:
+        sys.exit(1)
+
+    presets = {item.get('mode_flag'): item for item in config.get('presets', {}) if item.get('mode_flag')}
 
     print('Presets:')
     [print(f'  {key}: {val.get("name")}') for key, val in presets.items()]
@@ -100,6 +99,8 @@ if __name__ == '__main__':
     if data_path.is_dir():
         for mode in mode_flags:
             preset = presets.get(mode)
+            if not preset:
+                continue
             print(preset.get('name'))
             files = data_path.glob(preset.get('file_pattern', '*'))
             make_base(files, preset)
