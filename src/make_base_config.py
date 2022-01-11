@@ -54,6 +54,39 @@ def setup_jinja(template_folder: str = '.', encoding: str = 'utf-8') -> Environm
     return env
 
 
+def variables(options: Dict[str, dict], content: str, file: Path) -> Dict[str, str]:
+    vars = {
+        'filename': file.stem,
+        'ext': file.suffix,
+        'parent': str(file.parent)
+    }
+    for name, item in options.items():
+        # print(name, item)
+        target_type = item.get('target')
+        if not target_type:
+            continue
+        target = ''
+        if target_type == 'filepath':
+            target = str(file.absolute())
+        elif target_type == 'filename':
+            target = str(file.name)
+        elif target_type == 'content':
+            target = content
+        pattern = re.compile(item.get('pattern', '.*'), re.MULTILINE)
+        result = pattern.match(target)
+        if not result:
+            continue
+        index = item.get('index', None)
+        vars[name] = result.group() if index is None else result.group(index)
+    return vars
+
+
+def replace_variables(content: str, vars: Dict[str, str]) -> str:
+    for target, newstr in vars.items():
+        content = content.replace('${'+target+'}', newstr)
+    return content
+
+
 def make_base(files: Union[Generator, list], preset: Dict[str, Any]) -> None:
     template_data = preset.get('template')
     if not template_data:
@@ -61,15 +94,19 @@ def make_base(files: Union[Generator, list], preset: Dict[str, Any]) -> None:
     env = setup_jinja(template_data.get('folder'))
     params = dict()
     for file in files:
-        print(file)
+        file = Path(file)
+        content = ''
         if preset.get('read_content'):
             content = read_content(file, preset.get('read_content_options', {'start', 0}))
             params.update({'content': content})
         template = env.get_template(template_data.get('file'))
+        vars = variables(preset.get('variables', {}), content, file)
+        print(vars)
         params.update({'additional_params': preset.get('additional_params')})
+        params.update({'variables': vars})
         print(params)
         render = template.render(params)
-        save_path = resource_path(preset.get('output'), file.name)
+        save_path = resource_path(replace_variables(preset.get('output', 'output/{filename}_make.{ext}'), vars))
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with save_path.open('w', encoding='utf-8') as f:
             f.write(render)
@@ -92,10 +129,6 @@ if __name__ == '__main__':
     mode_flags = input('Mode >>')
     data_path = Path(input('Path >>')) if args.input is None else Path(args.input)
 
-    # print(data_path)
-
-    # write_types = 'iba'
-
     if data_path.is_dir():
         for mode in mode_flags:
             preset = presets.get(mode)
@@ -104,10 +137,3 @@ if __name__ == '__main__':
             print(preset.get('name'))
             files = data_path.glob(preset.get('file_pattern', '*'))
             make_base(files, preset)
-
-    #     files = data_path.glob('*')
-    #     for m in list(write_types):
-    #         for file in files:
-    #             if file.is_file():
-    #                 with file.open('r') as f:
-    #                     f.write(file, type)
