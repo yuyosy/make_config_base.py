@@ -36,14 +36,12 @@ def read_content(file: Path, option: Dict[str, Any]) -> str:
         data = f.read()
     start = option.get('start', 0)
     end = option.get('end', None)
-    # print(start, repr(end))
     if isinstance(start, str):
         match = re.search(re.compile(start), data)
         start = 0 if match is None else match.start()
     if isinstance(end, str):
         match = re.search(re.compile(end), data)
         end = None if match is None else match.end()
-    # print(start, end)
     if end is None:
         return data[start:]
     return data[start:end]
@@ -61,7 +59,6 @@ def variables(options: Dict[str, dict], content: str, file: Path) -> Dict[str, s
         'parent': str(file.parent)
     }
     for name, item in options.items():
-        # print(name, item)
         target_type = item.get('target')
         if not target_type:
             continue
@@ -73,7 +70,7 @@ def variables(options: Dict[str, dict], content: str, file: Path) -> Dict[str, s
         elif target_type == 'content':
             target = content
         pattern = re.compile(item.get('pattern', '.*'), re.MULTILINE)
-        result = pattern.match(target)
+        result = pattern.search(target)
         if not result:
             continue
         index = item.get('index', None)
@@ -101,10 +98,8 @@ def make_base(files: Union[Generator, list], preset: Dict[str, Any]) -> None:
             params.update({'content': content})
         template = env.get_template(template_data.get('file'))
         vars = variables(preset.get('variables', {}), content, file)
-        print(vars)
         params.update({'additional_params': preset.get('additional_params')})
         params.update({'variables': vars})
-        print(params)
         render = template.render(params)
         save_path = resource_path(replace_variables(preset.get('output', 'output/{filename}_make.{ext}'), vars))
         save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -126,7 +121,7 @@ if __name__ == '__main__':
     print('Presets:')
     [print(f'  {key}: {val.get("name")}') for key, val in presets.items()]
 
-    mode_flags = input('Mode >>')
+    mode_flags = input('Mode >>') if args.mode is None else args.mode
     data_path = Path(input('Path >>')) if args.input is None else Path(args.input)
 
     if data_path.is_dir():
