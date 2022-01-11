@@ -1,10 +1,38 @@
 name: default
 presets:
+  # - 
+  #   name: # Presetの名前
+  #   mode_flag: # Presetの識別子 (一文字)
+  #   file_pattern: # 対象とするファイルパターン (ワイルドカードパターン)
+  #   output: # 出力ファイルパス
+        ## ${parent} ... 元のファイルの親ディレクトリパス
+        ## ${filename} ... 元のファイル名
+        ## ${ext} ... 元のファイルの拡張子
+        ## ${} ... variablesで定義した変数
+  #   template: # テンプレートオプション
+  #     folder: templates # テンプレートの起点フォルダ
+  #     file: content_base.j2 # テンプレートファイル名
+  #   read_content: true # ファイルの内容を取得する (省略可; Default=false)
+  #   read_content_options: # ファイルの内容を取得時のオプション
+  #     start: 0 # ファイルの内容の取得範囲 (始め; 文字位置または正規表現)
+  #     end: '#show running-config' # ファイルの内容の取得範囲 (終わり; 文字位置または正規表現)
+  #   variables: # 変数定義 (ファイル名やファイル内容から正規表現で定義)
+        ## parent, filename, extは定義済み
+        ## テンプレートからは `{{variables.name}}` で参照する 
+  #     name: # 変数名
+  #       target: filename # 対象
+            ## filepath ... 絶対パスから
+            ## filename ... ファイル名から
+            ## content ... ファイル内容から
+  #       pattern: '^.*?(?=_)' # 正規表現
+  #   additional_params: # テンプレートに渡す追加パラメータ
+  #     mode: 想定 # 定義 (パラメータ名:パラメータ内容)
+          ## テンプレートからは `{{additional_params.mode}}` で参照する 
   - 
     name: 想定Configベースファイル
     mode_flag: i
     file_pattern: '*.txt'
-    output: output/Config/想定
+    output: ${parent}/想定/${name}_image.txt
     template:
       folder: templates 
       file: content_base.j2
@@ -13,26 +41,38 @@ presets:
       start: 0
       end: '#show running-config'
       # - end: '#show startup-config'
+    variables:
+      name:
+        target: filename
+        pattern: '^.*?(?=_)'
     additional_params:
       mode: 想定
   - 
     name: 投入Configベースファイル
     mode_flag: a
     file_pattern: '*.txt'
-    output: output/Config/投入
+    output: ${parent}/投入/${name}_add.txt
     template:
       folder: templates 
       file: config_base.j2
+    variables:
+      name:
+        target: filename
+        pattern: '^.*?(?=_)'
     additional_params:
       mode: 投入
   - 
     name: 戻しConfigベースファイル
     mode_flag: b
     file_pattern: '*.txt'
-    output: output/Config/戻し
+    output: ${parent}/戻し/${name}_back.txt
     template:
       folder: templates 
       file: config_base.j2
+    variables:
+      name:
+        target: filename
+        pattern: '^.*?(?=_)'
     additional_params:
       mode: 戻し
 
